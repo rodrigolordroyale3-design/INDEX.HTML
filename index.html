@@ -2881,49 +2881,60 @@
   }
 
   async function simulateImageSearch(product) {
-    const rand = Math.random();
+  try {
+    const params = new URLSearchParams();
+    if (product.barcode) params.append('barcode', product.barcode);
+    if (product.description) params.append('description', product.description);
 
-    // Nível 1: código de barras (30% de chance)
-    if (rand < 0.30) {
+    const response = await fetch(`/api/search-images?${params.toString()}`);
+    const data = await response.json();
+
+    if (data.best) {
+      const r = data.best;
+      let sourceKey = 'desc';
+      let levelLabel = '🔵 Nível 2 — Descrição';
+
+      if (r.provider === 'openfacts') {
+        sourceKey = 'barcode';
+        levelLabel = '🟢 Nível 1 — Código de barras';
+      } else if (r.score >= 50) {
+        sourceKey = 'barcode';
+        levelLabel = '🟢 Nível 1 — Código de barras';
+      } else if (r.score >= 20) {
+        sourceKey = 'desc';
+        levelLabel = '🔵 Nível 2 — Descrição';
+      } else {
+        sourceKey = 'generic';
+        levelLabel = '🟡 Nível 3 — Termo genérico';
+      }
+
       return {
-        image: `https://picsum.photos/seed/${product.barcode}/300/300`,
-        source: 'Código de barras',
-        sourceKey: 'barcode',
-        levelLabel: '🟢 Nível 1 — Código de barras'
+        image: r.url,
+        source: r.source,
+        sourceKey,
+        levelLabel,
+        allResults: data.results
       };
     }
 
-    // Nível 2: descrição (40% de chance)
-    if (rand < 0.70) {
-      const seed = encodeURIComponent(product.description || 'produto').substring(0, 10);
-      return {
-        image: `https://picsum.photos/seed/${seed}/300/300`,
-        source: 'Descrição',
-        sourceKey: 'desc',
-        levelLabel: '🔵 Nível 2 — Descrição'
-      };
-    }
-
-    // Nível 3: genérica (20% de chance)
-    if (rand < 0.90) {
-      const words = (product.description || 'produto').split(' ');
-      const seed = words[words.length - 1];
-      return {
-        image: `https://picsum.photos/seed/${seed}gen/300/300`,
-        source: 'Genérica',
-        sourceKey: 'generic',
-        levelLabel: '🟡 Nível 3 — Termo genérico'
-      };
-    }
-
-    // Nível 4: sem foto
     return {
       image: null,
       source: 'Sem foto',
       sourceKey: 'none',
-      levelLabel: '🔴 Sem imagem encontrada'
+      levelLabel: '🔴 Sem imagem encontrada',
+      allResults: []
+    };
+
+  } catch (e) {
+    return {
+      image: null,
+      source: 'Sem foto',
+      sourceKey: 'none',
+      levelLabel: '🔴 Sem imagem encontrada',
+      allResults: []
     };
   }
+}
 
   function addLogItem(product, result) {
     const list = document.getElementById('proc-log-list');
