@@ -2824,7 +2824,7 @@
   let processingStats = { barcode: 0, desc: 0, generic: 0, none: 0 };
 
   function startProcessing() {
-    const importedProducts = state.products;
+    importedProducts = state.products;
     if (!importedProducts || importedProducts.length === 0) {
       showToast('Nenhum produto para processar.', 'error');
       return;
